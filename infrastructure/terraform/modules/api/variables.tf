@@ -1,0 +1,12 @@
+variable "environment"            { type = string }
+variable "name_prefix"            { type = string }
+variable "aws_region"             { type = string }
+variable "table_name"             { type = string }
+variable "table_arn"              { type = string }
+variable "photos_bucket_name"     { type = string }
+variable "photos_bucket_arn"      { type = string }
+variable "processing_queue_url"   { type = string }
+variable "processing_queue_arn"   { type = string }
+variable "api_lambda_role_arn"    { type = string }
+variable "cognito_user_pool_arn"  { type = string }
+variable "allowed_models"         { type = string }

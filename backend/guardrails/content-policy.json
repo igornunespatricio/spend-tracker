@@ -1,0 +1,38 @@
+{
+  "name": "spend-tracker-guardrail",
+  "description": "Guardrail applied to all Bedrock model calls in spend-tracker. Blocks PII extraction requests, off-topic conversations, and harmful content.",
+  "blockedInputMessaging": "I can only help with extracting spending information from receipts and managing your expenses.",
+  "blockedOutputsMessaging": "I cannot provide that information.",
+  "contentPolicyConfig": {
+    "filtersConfig": [
+      { "type": "SEXUAL",     "inputStrength": "HIGH",   "outputStrength": "HIGH" },
+      { "type": "VIOLENCE",   "inputStrength": "MEDIUM", "outputStrength": "MEDIUM" },
+      { "type": "HATE",       "inputStrength": "HIGH",   "outputStrength": "HIGH" },
+      { "type": "INSULTS",    "inputStrength": "MEDIUM", "outputStrength": "MEDIUM" },
+      { "type": "MISCONDUCT", "inputStrength": "HIGH",   "outputStrength": "HIGH" },
+      { "type": "PROMPT_ATTACK", "inputStrength": "HIGH", "outputStrength": "NONE" }
+    ]
+  },
+  "sensitiveInformationPolicyConfig": {
+    "piiEntitiesConfig": [
+      { "type": "PASSWORD",       "action": "BLOCK" },
+      { "type": "AWS_ACCESS_KEY", "action": "BLOCK" },
+      { "type": "CREDIT_DEBIT_CARD_NUMBER", "action": "ANONYMIZE" },
+      { "type": "PHONE",          "action": "ANONYMIZE" }
+    ]
+  },
+  "topicPolicyConfig": {
+    "topicsConfig": [
+      {
+        "name": "non-financial-topics",
+        "definition": "Requests unrelated to spending tracking, receipts, expenses, or financial management",
+        "examples": [
+          "Write me a poem",
+          "What is the capital of France?",
+          "How do I hack a system?"
+        ],
+        "type": "DENY"
+      }
+    ]
+  }
+}

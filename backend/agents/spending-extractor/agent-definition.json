@@ -1,0 +1,20 @@
+{
+  "name": "SpendingExtractorAgent",
+  "description": "Bedrock Agent that processes uploaded receipt photos and extracts structured spending data.",
+  "instruction": "You are a financial data extraction assistant specialised in reading receipts, tax notes, and purchase invoices. When given a photo, extract all spending items with their amounts, categories, and the store/vendor name. Always return structured JSON data. If amounts are ambiguous, choose the most likely total per line item. Map categories to: FOOD, TRANSPORT, HEALTH, ENTERTAINMENT, CLOTHING, UTILITIES, or OTHER.",
+  "foundationModel": "anthropic.claude-3-5-sonnet-20241022-v2:0",
+  "idleSessionTTLInSeconds": 1800,
+  "actionGroups": [
+    {
+      "actionGroupName": "SpendingOperations",
+      "description": "Actions for saving and retrieving spending data",
+      "actionGroupExecutor": {
+        "lambda": "arn:aws:lambda:{region}:{accountId}:function:spend-tracker-{env}-spending-api"
+      }
+    }
+  ],
+  "guardrailConfiguration": {
+    "guardrailIdentifier": "{guardrailId}",
+    "guardrailVersion": "DRAFT"
+  }
+}

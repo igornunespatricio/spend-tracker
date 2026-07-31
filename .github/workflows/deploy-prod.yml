@@ -1,0 +1,129 @@
+name: Deploy — Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'deploy-prod' to confirm production deployment"
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  TF_WORKSPACE: prod
+  ENVIRONMENT: prod
+
+jobs:
+  validate-input:
+    name: Validate Deploy Confirmation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check confirmation
+        run: |
+          if [[ "${{ github.event.inputs.confirm }}" != "deploy-prod" ]]; then
+            echo "❌ Confirmation required. Type 'deploy-prod' in the confirm input."
+            exit 1
+          fi
+          echo "✅ Deployment confirmed"
+
+  deploy-infrastructure:
+    name: Terraform Apply (prod)
+    needs: validate-input
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: infrastructure/terraform
+    outputs:
+      api_endpoint: ${{ steps.tf_output.outputs.api_endpoint }}
+      cognito_user_pool_id: ${{ steps.tf_output.outputs.cognito_user_pool_id }}
+      cognito_client_id: ${{ steps.tf_output.outputs.cognito_client_id }}
+      website_bucket_name: ${{ steps.tf_output.outputs.website_bucket_name }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.5"
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}" \
+            -backend-config="key=spend-tracker/terraform.tfstate" \
+            -backend-config="region=${{ vars.AWS_REGION }}" \
+            -backend-config="use_lockfile=true" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform Workspace
+        run: terraform workspace select ${{ env.TF_WORKSPACE }} || terraform workspace new ${{ env.TF_WORKSPACE }}
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=environments/${{ env.ENVIRONMENT }}/terraform.tfvars -out=tfplan
+
+      - name: Terraform Apply
+        run: terraform apply tfplan
+
+      - name: Capture Terraform Outputs
+        id: tf_output
+        run: |
+          echo "api_endpoint=$(terraform output -raw api_endpoint)" >> $GITHUB_OUTPUT
+          echo "cognito_user_pool_id=$(terraform output -raw cognito_user_pool_id)" >> $GITHUB_OUTPUT
+          echo "cognito_client_id=$(terraform output -raw cognito_client_id)" >> $GITHUB_OUTPUT
+          echo "website_bucket_name=$(terraform output -raw website_bucket_name)" >> $GITHUB_OUTPUT
+
+  deploy-frontend:
+    name: Build & Deploy Frontend (prod)
+    needs: deploy-infrastructure
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Build
+        env:
+          VITE_API_URL: ${{ needs.deploy-infrastructure.outputs.api_endpoint }}
+          VITE_COGNITO_USER_POOL_ID: ${{ needs.deploy-infrastructure.outputs.cognito_user_pool_id }}
+          VITE_COGNITO_CLIENT_ID: ${{ needs.deploy-infrastructure.outputs.cognito_client_id }}
+          VITE_REGION: ${{ env.AWS_REGION }}
+          VITE_ENVIRONMENT: ${{ env.ENVIRONMENT }}
+        run: npm run build
+
+      - name: Sync to S3
+        run: |
+          aws s3 sync dist/ s3://${{ needs.deploy-infrastructure.outputs.website_bucket_name }} \
+            --delete \
+            --cache-control "max-age=31536000,immutable" \
+            --exclude "index.html"
+          aws s3 cp dist/index.html \
+            s3://${{ needs.deploy-infrastructure.outputs.website_bucket_name }}/index.html \
+            --cache-control "no-cache,no-store,must-revalidate"
