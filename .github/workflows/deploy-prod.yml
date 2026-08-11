@@ -67,7 +67,10 @@ jobs:
             -backend-config="workspace_key_prefix="
 
       - name: Terraform Workspace
-        run: terraform workspace select ${{ env.TF_WORKSPACE }} || terraform workspace new ${{ env.TF_WORKSPACE }}
+        run: |
+          if [ -z "${TF_WORKSPACE:-}" ]; then
+            terraform workspace select ${{ env.TF_WORKSPACE }} || terraform workspace new ${{ env.TF_WORKSPACE }}
+          fi
 
       - name: Terraform Plan
         run: terraform plan -var-file=environments/${{ env.ENVIRONMENT }}/terraform.tfvars -out=tfplan

@@ -52,7 +52,12 @@ jobs:
             -backend-config="workspace_key_prefix="
 
       - name: Terraform Workspace
-        run: terraform workspace select ${{ env.TF_WORKSPACE }} || terraform workspace new ${{ env.TF_WORKSPACE }}
+        run: |
+          # TF_WORKSPACE env var already selects the workspace automatically.
+          # Only run select/new when it is not set to avoid the override conflict error.
+          if [ -z "${TF_WORKSPACE:-}" ]; then
+            terraform workspace select ${{ env.TF_WORKSPACE }} || terraform workspace new ${{ env.TF_WORKSPACE }}
+          fi
 
       - name: Terraform Apply
         run: terraform apply -auto-approve -var-file=environments/${{ env.ENVIRONMENT }}/terraform.tfvars
