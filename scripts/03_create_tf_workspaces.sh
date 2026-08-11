@@ -32,7 +32,6 @@ terraform init \
   -backend-config="bucket=${BUCKET_NAME}" \
   -backend-config="key=${TF_STATE_KEY}" \
   -backend-config="region=${REGION}" \
-  -backend-config="use_lockfile=true" \
   -backend-config="encrypt=true" \
   -backend-config="workspace_key_prefix=" \
   -reconfigure
