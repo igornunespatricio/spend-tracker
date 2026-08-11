@@ -35,13 +35,13 @@ resource "aws_cognito_user_pool" "main" {
   tags = { Name = "${var.name_prefix}-users" }
 }
 
-resource "aws_cognito_user_pool_group" "admins" {
+resource "aws_cognito_user_group" "admins" {
   name         = "admins"
   user_pool_id = aws_cognito_user_pool.main.id
   description  = "Application administrators"
 }
 
-resource "aws_cognito_user_pool_group" "users" {
+resource "aws_cognito_user_group" "users" {
   name         = "users"
   user_pool_id = aws_cognito_user_pool.main.id
   description  = "Standard application users"
