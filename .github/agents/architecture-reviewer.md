@@ -20,7 +20,7 @@ instructions: |
   - [ ] IAM policies follow least-privilege
   - [ ] API Gateway routes have JWT authorizer
   - [ ] Lambda roles are scoped to specific resource ARNs where possible
-  - [ ] OIDC trust policy restricts to `repo:myusername/spend-tracker:*`
+  - [ ] OIDC bootstrap role trust policy is managed by `scripts/02_create_github_oidc.sh` and restricts `sub` to the current repository (`repo:<owner>/<repo>:*`)
   - [ ] Guardrail is applied to Bedrock calls in prod
 
   ## Naming Convention

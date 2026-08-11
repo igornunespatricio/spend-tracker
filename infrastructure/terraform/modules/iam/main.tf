@@ -22,9 +22,9 @@ resource "aws_iam_role_policy" "api_lambda" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "Logs"
-        Effect = "Allow"
-        Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+        Sid      = "Logs"
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:${var.aws_region}:${var.account_id}:log-group:/aws/lambda/${var.name_prefix}-*"
       },
       {
@@ -40,15 +40,15 @@ resource "aws_iam_role_policy" "api_lambda" {
         ]
       },
       {
-        Sid    = "S3Photos"
-        Effect = "Allow"
-        Action = ["s3:PutObject", "s3:GetObject", "s3:GeneratePresignedUrl"]
+        Sid      = "S3Photos"
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:GetObject", "s3:GeneratePresignedUrl"]
         Resource = "arn:aws:s3:::${var.name_prefix}-photos/*"
       },
       {
-        Sid    = "SQSSend"
-        Effect = "Allow"
-        Action = ["sqs:SendMessage"]
+        Sid      = "SQSSend"
+        Effect   = "Allow"
+        Action   = ["sqs:SendMessage"]
         Resource = "arn:aws:sqs:${var.aws_region}:${var.account_id}:${var.name_prefix}-processing.fifo"
       }
     ]
@@ -69,21 +69,21 @@ resource "aws_iam_role_policy" "processor_lambda" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "Logs"
-        Effect = "Allow"
-        Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+        Sid      = "Logs"
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
         Resource = "arn:aws:logs:${var.aws_region}:${var.account_id}:log-group:/aws/lambda/${var.name_prefix}-*"
       },
       {
-        Sid    = "SQSConsume"
-        Effect = "Allow"
-        Action = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
+        Sid      = "SQSConsume"
+        Effect   = "Allow"
+        Action   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"]
         Resource = "arn:aws:sqs:${var.aws_region}:${var.account_id}:${var.name_prefix}-processing.fifo"
       },
       {
-        Sid    = "S3Read"
-        Effect = "Allow"
-        Action = ["s3:GetObject"]
+        Sid      = "S3Read"
+        Effect   = "Allow"
+        Action   = ["s3:GetObject"]
         Resource = "arn:aws:s3:::${var.name_prefix}-photos/*"
       },
       {
@@ -96,51 +96,17 @@ resource "aws_iam_role_policy" "processor_lambda" {
         ]
       },
       {
-        Sid    = "Bedrock"
-        Effect = "Allow"
-        Action = ["bedrock:InvokeModel", "bedrock:ApplyGuardrail"]
+        Sid      = "Bedrock"
+        Effect   = "Allow"
+        Action   = ["bedrock:InvokeModel", "bedrock:ApplyGuardrail"]
         Resource = "*"
       },
       {
-        Sid    = "EventBridge"
-        Effect = "Allow"
-        Action = ["events:PutEvents"]
+        Sid      = "EventBridge"
+        Effect   = "Allow"
+        Action   = ["events:PutEvents"]
         Resource = "arn:aws:events:${var.aws_region}:${var.account_id}:event-bus/${var.name_prefix}-processing"
       }
     ]
   })
-}
-
-# ── GitHub Actions OIDC Role ──────────────────────────────────────────────────
-data "aws_iam_policy_document" "github_oidc_assume" {
-  statement {
-    principals {
-      type        = "Federated"
-      identifiers = ["arn:aws:iam::${var.account_id}:oidc-provider/token.actions.githubusercontent.com"]
-    }
-    actions = ["sts:AssumeRoleWithWebIdentity"]
-
-    condition {
-      test     = "StringEquals"
-      variable = "token.actions.githubusercontent.com:aud"
-      values   = ["sts.amazonaws.com"]
-    }
-
-    condition {
-      test     = "StringLike"
-      variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:myusername/spend-tracker:*"]
-    }
-  }
-}
-
-resource "aws_iam_role" "github_actions" {
-  name               = "${var.name_prefix}-github-actions"
-  assume_role_policy = data.aws_iam_policy_document.github_oidc_assume.json
-  description        = "GitHub Actions OIDC role for ${var.environment}"
-}
-
-resource "aws_iam_role_policy_attachment" "github_actions_admin" {
-  role       = aws_iam_role.github_actions.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }

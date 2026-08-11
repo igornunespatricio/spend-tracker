@@ -77,7 +77,7 @@ docs/                              ← Architecture documentation
 - Remote state in S3 with DynamoDB locking
 - All resources tagged with `{ Environment, Project, ManagedBy = "terraform" }`
 - Modules receive environment name via `var.environment`
-- OIDC role trust policy must include `repo:myusername/spend-tracker:*`
+- GitHub OIDC provider and CI assume-role IAM roles are bootstrap resources managed by `scripts/02_create_github_oidc.sh` (not Terraform modules)
 
 ### DynamoDB Single-Table Design
 
