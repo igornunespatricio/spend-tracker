@@ -14,21 +14,27 @@ ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/nu
   || error "Cannot get AWS account ID."
 
 BUCKET_NAME="spend-tracker-tfstate-${ACCOUNT_ID}"
+command -v gh &>/dev/null || error "GitHub CLI (gh) not found. Install gh and run from the target repository."
+GITHUB_REPO="$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || true)"
+[[ -n "${GITHUB_REPO}" ]] || error "Could not detect repository via gh. Run this script from the target repository."
+TF_STATE_KEY="terraform.tfstate"
 TF_DIR="$(cd "$(dirname "$0")/../infrastructure/terraform" && pwd)"
 
 command -v terraform &>/dev/null || error "Terraform not found. Install terraform >= 1.10"
 
 info "Working in: ${TF_DIR}"
+info "Repository: ${GITHUB_REPO}"
 cd "${TF_DIR}"
 
 # ── Terraform Init ────────────────────────────────────────────────────────────
 info "Running terraform init with S3 backend..."
 terraform init \
   -backend-config="bucket=${BUCKET_NAME}" \
-  -backend-config="key=spend-tracker/terraform.tfstate" \
+  -backend-config="key=${TF_STATE_KEY}" \
   -backend-config="region=${REGION}" \
   -backend-config="use_lockfile=true" \
   -backend-config="encrypt=true" \
+  -backend-config="workspace_key_prefix=" \
   -reconfigure
 
 info "Init complete ✓"

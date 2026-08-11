@@ -10,10 +10,13 @@ warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 error() { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
 
 REGION="${AWS_REGION:-us-east-1}"
-GITHUB_REPO="myusername/spend-tracker"
 OIDC_URL="https://token.actions.githubusercontent.com"
 OIDC_THUMBPRINT="6938fd4d98bab03faadb97b34396831e3780aea1"
 ENVIRONMENTS=("dev" "test" "prod")
+
+command -v gh &>/dev/null || error "GitHub CLI (gh) is required to detect the repository. Install gh and run from the target repo."
+GITHUB_REPO="$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || true)"
+[[ -n "${GITHUB_REPO}" ]] || error "Could not detect repository via gh. Run this script from the target repository."
 
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null) \
   || error "Cannot get AWS account ID."
@@ -72,7 +75,8 @@ EOF
     aws iam create-role \
       --role-name "${ROLE_NAME}" \
       --assume-role-policy-document "${TRUST_POLICY}" \
-      --description "GitHub Actions OIDC role for spend-tracker ${ENV}"
+      --description "GitHub Actions OIDC role for spend-tracker ${ENV}" \
+      >/dev/null
     info "Role created ✓"
   fi
 
@@ -92,23 +96,14 @@ done
 
 # ── Set GitHub repository secrets ─────────────────────────────────────────────
 echo
-if command -v gh &>/dev/null; then
-  info "Setting GitHub repository secrets via GitHub CLI..."
-  for ENV in "${ENVIRONMENTS[@]}"; do
-    ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/spend-tracker-github-${ENV}"
-    ENV_UPPER=$(echo "${ENV}" | tr '[:lower:]' '[:upper:]')
-    gh secret set "AWS_ROLE_ARN_${ENV_UPPER}" --body "${ROLE_ARN}" --repo "${GITHUB_REPO}"
-    info "Secret AWS_ROLE_ARN_${ENV_UPPER} set ✓"
-  done
-  info "Secrets set successfully ✓"
-else
-  warn "GitHub CLI (gh) not found — add these secrets manually in GitHub:"
-  for ENV in "${ENVIRONMENTS[@]}"; do
-    ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/spend-tracker-github-${ENV}"
-    ENV_UPPER=$(echo "${ENV}" | tr '[:lower:]' '[:upper:]')
-    echo "  AWS_ROLE_ARN_${ENV_UPPER} = ${ROLE_ARN}"
-  done
-fi
+info "Setting GitHub repository secrets via GitHub CLI..."
+for ENV in "${ENVIRONMENTS[@]}"; do
+  ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/spend-tracker-github-${ENV}"
+  ENV_UPPER=$(echo "${ENV}" | tr '[:lower:]' '[:upper:]')
+  gh secret set "AWS_ROLE_ARN_${ENV_UPPER}" --body "${ROLE_ARN}" --repo "${GITHUB_REPO}"
+  info "Secret AWS_ROLE_ARN_${ENV_UPPER} set ✓"
+done
+info "Secrets set successfully ✓"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo

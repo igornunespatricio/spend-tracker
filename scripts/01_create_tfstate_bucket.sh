@@ -11,7 +11,6 @@ warn()    { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
 
 REGION="${AWS_REGION:-us-east-1}"
-GITHUB_REPO="${GITHUB_REPO:-myusername/spend-tracker}"
 
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null) \
   || error "Cannot get AWS account ID. Is AWS CLI configured?"
@@ -59,10 +58,17 @@ command -v gh &>/dev/null || { warn "GitHub CLI (gh) not found — skipping vari
   echo "  TF_STATE_BUCKET = ${BUCKET_NAME}"; echo "  AWS_REGION = ${REGION}"; }
 
 if command -v gh &>/dev/null; then
-  info "Setting GitHub repository variables..."
-  gh variable set TF_STATE_BUCKET --body "${BUCKET_NAME}" --repo "${GITHUB_REPO}"
-  gh variable set AWS_REGION       --body "${REGION}"       --repo "${GITHUB_REPO}"
-  info "GitHub variables set ✓"
+  GITHUB_REPO="$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || true)"
+  if [[ -z "${GITHUB_REPO}" ]]; then
+    warn "Could not detect repository via gh — skipping variable setup. Set manually:"
+    echo "  TF_STATE_BUCKET = ${BUCKET_NAME}"
+    echo "  AWS_REGION = ${REGION}"
+  else
+    info "Setting GitHub repository variables for ${GITHUB_REPO}..."
+    gh variable set TF_STATE_BUCKET --body "${BUCKET_NAME}" --repo "${GITHUB_REPO}"
+    gh variable set AWS_REGION       --body "${REGION}"       --repo "${GITHUB_REPO}"
+    info "GitHub variables set ✓"
+  fi
 fi
 
 # ── Output ────────────────────────────────────────────────────────────────────
