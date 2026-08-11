@@ -53,7 +53,8 @@ module "api" {
   processing_queue_url  = module.processing.queue_url
   processing_queue_arn  = module.processing.queue_arn
   api_lambda_role_arn   = module.iam.api_lambda_role_arn
-  cognito_user_pool_arn = module.auth.user_pool_arn
+  cognito_user_pool_id  = module.auth.user_pool_id
+  cognito_client_id     = module.auth.client_id
   allowed_models        = var.allowed_bedrock_models
 }
 

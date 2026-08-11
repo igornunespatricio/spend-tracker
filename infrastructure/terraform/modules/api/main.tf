@@ -51,8 +51,8 @@ resource "aws_apigatewayv2_authorizer" "cognito" {
   name             = "cognito-authorizer"
 
   jwt_configuration {
-    audience = ["${var.cognito_user_pool_arn}"]
-    issuer   = "https://cognito-idp.${var.aws_region}.amazonaws.com/${split("/", split("_", var.cognito_user_pool_arn)[1])[0]}"
+    audience = [var.cognito_client_id]
+    issuer   = "https://cognito-idp.${var.aws_region}.amazonaws.com/${var.cognito_user_pool_id}"
   }
 }
 
