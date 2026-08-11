@@ -10,12 +10,12 @@ terraform {
 
   backend "s3" {
     # Values injected by scripts/03_create_tf_workspaces.sh or CI/CD
-    # bucket       = "spend-tracker-tfstate-<accountId>"
-    # key          = "spend-tracker/terraform.tfstate"
-    # region       = "us-east-1"
-    # use_lockfile = true
-    # encrypt      = true
-    # workspace_key_prefix = "spend-tracker"
+    # bucket               = "spend-tracker-tfstate-<accountId>"
+    # key                  = "terraform.tfstate"
+    # region               = "us-east-1"
+    # use_lockfile         = true
+    # encrypt              = true
+    # workspace_key_prefix = ""   # → state stored at: bucket/<workspace>/terraform.tfstate
   }
 }
 
