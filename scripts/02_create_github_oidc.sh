@@ -11,7 +11,10 @@ error() { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
 
 REGION="${AWS_REGION:-us-east-1}"
 OIDC_URL="https://token.actions.githubusercontent.com"
-OIDC_THUMBPRINT="6938fd4d98bab03faadb97b34396831e3780aea1"
+# AWS validates GitHub's OIDC provider via its own trusted CA list.
+# The thumbprint below is GitHub's current leaf cert thumbprint (updated 2023-06).
+# Re-run this script if you see "Not authorized to perform sts:AssumeRoleWithWebIdentity".
+OIDC_THUMBPRINT="1c58a3a8518e8759bf075b76b750d4f2df264fcd"
 ENVIRONMENTS=("dev" "test" "prod")
 
 command -v gh &>/dev/null || error "GitHub CLI (gh) is required to detect the repository. Install gh and run from the target repo."
@@ -27,7 +30,11 @@ info "Account: ${ACCOUNT_ID} | Repo: ${GITHUB_REPO}"
 OIDC_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
 
 if aws iam get-open-id-connect-provider --open-id-connect-provider-arn "${OIDC_ARN}" 2>/dev/null | grep -q Url; then
-  warn "OIDC provider already exists — skipping"
+  warn "OIDC provider already exists — updating thumbprint list"
+  aws iam update-open-id-connect-provider-thumbprint \
+    --open-id-connect-provider-arn "${OIDC_ARN}" \
+    --thumbprint-list "${OIDC_THUMBPRINT}"
+  info "Thumbprint updated ✓"
 else
   info "Creating GitHub OIDC provider..."
   aws iam create-open-id-connect-provider \
