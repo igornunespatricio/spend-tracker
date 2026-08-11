@@ -21,10 +21,31 @@ command -v gh &>/dev/null || error "GitHub CLI (gh) is required to detect the re
 GITHUB_REPO="$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null || true)"
 [[ -n "${GITHUB_REPO}" ]] || error "Could not detect repository via gh. Run this script from the target repository."
 
+GITHUB_ORG="${GITHUB_REPO%%/*}"
+GITHUB_REPO_NAME="${GITHUB_REPO##*/}"
+
+# Resolve numeric IDs for the immutable-ID "sub" format introduced July 2026.
+# Capture raw JSON first with || true so pipefail doesn't exit on a 404;
+# then extract .id with jq separately.
+_org_json="$(gh api "/orgs/${GITHUB_ORG}" 2>/dev/null)" || true
+ORG_ID="$(echo "${_org_json}" | jq -r '.id // empty')"
+if [[ -z "${ORG_ID}" ]]; then
+  _user_json="$(gh api "/users/${GITHUB_ORG}" 2>/dev/null)" \
+    || error "Could not resolve GitHub org/user ID for '${GITHUB_ORG}'."
+  ORG_ID="$(echo "${_user_json}" | jq -r '.id // empty')"
+fi
+[[ -n "${ORG_ID}" ]] || error "Could not resolve GitHub org/user ID for '${GITHUB_ORG}'."
+_repo_json="$(gh api "/repos/${GITHUB_REPO}" 2>/dev/null)" \
+  || error "Could not resolve GitHub repo ID for '${GITHUB_REPO}'."
+REPO_ID="$(echo "${_repo_json}" | jq -r '.id // empty')"
+[[ -n "${REPO_ID}" ]] || error "Could not resolve GitHub repo ID for '${GITHUB_REPO}'."
+
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null) \
   || error "Cannot get AWS account ID."
 
-info "Account: ${ACCOUNT_ID} | Repo: ${GITHUB_REPO}"
+info "Account:  ${ACCOUNT_ID}"
+info "Repo:     ${GITHUB_REPO} (repo ID: ${REPO_ID})"
+info "Org/User: ${GITHUB_ORG} (org/user ID: ${ORG_ID})"
 
 # ── OIDC Provider ─────────────────────────────────────────────────────────────
 OIDC_ARN="arn:aws:iam::${ACCOUNT_ID}:oidc-provider/token.actions.githubusercontent.com"
@@ -64,7 +85,10 @@ for ENV in "${ENVIRONMENTS[@]}"; do
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:${GITHUB_REPO}:*"
+          "token.actions.githubusercontent.com:sub": [
+            "repo:${GITHUB_REPO}:*",
+            "repo:${GITHUB_ORG}@${ORG_ID}/${GITHUB_REPO_NAME}@${REPO_ID}:*"
+          ]
         }
       }
     }
