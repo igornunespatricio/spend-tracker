@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import {
   PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis,
-  LineChart, Line, ResponsiveContainer, CartesianGrid, Legend,
+  ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
 import { Calendar, TrendingUp, Trash2 } from "lucide-react";
 import { useSpending, useCategoryChartData, useDeleteSpending } from "@/hooks/useSpending";

@@ -3,7 +3,7 @@ import { Camera, Upload, RefreshCw, Check, AlertCircle } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { createJob, uploadPhoto, submitJob, getJob, confirmJob } from "@/services/api";
 import { CATEGORIES, CATEGORY_LABELS, BEDROCK_MODELS } from "@/types";
-import type { ExtractedItem, BedrockModel, Category, JobStatus } from "@/types";
+import type { ExtractedItem, BedrockModel, JobStatus } from "@/types";
 import { useNavigate } from "react-router-dom";
 
 type Step = "select" | "uploading" | "processing" | "review" | "done" | "error";
@@ -21,7 +21,7 @@ export default function PhotoUpload(): JSX.Element {
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   // Poll for job status every 3s while processing
-  const { data: jobData } = useQuery({
+  useQuery({
     queryKey: ["job", jobId],
     queryFn: () => getJob(jobId),
     enabled: step === "processing" && !!jobId,

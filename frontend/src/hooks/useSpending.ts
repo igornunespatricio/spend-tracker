@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { listSpending, createSpending, deleteSpending } from "@/services/api";
-import type { SpendingItem, DateRange, SpendingSummary, Category } from "@/types";
+import type { DateRange, SpendingSummary, Category } from "@/types";
 import { CATEGORY_COLORS } from "@/types";
 
 export function useSpending(range: DateRange) {
